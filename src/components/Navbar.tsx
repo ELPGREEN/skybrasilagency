@@ -14,6 +14,7 @@ const Navbar = () => {
     { name: "Para Empresas", path: "/empresas" },
     { name: "Como Funciona", path: "/como-funciona" },
     { name: "Plataforma", path: "/plataforma" },
+    { name: "Vendas", path: "/vendas" },
     { name: "Blog", path: "/blog" },
     { name: "Contato", path: "/contato" },
   ];

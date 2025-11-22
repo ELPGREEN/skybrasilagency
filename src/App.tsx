@@ -13,6 +13,7 @@ import Platform from "./pages/Platform";
 import Blog from "./pages/Blog";
 import Contact from "./pages/Contact";
 import VIP from "./pages/VIP";
+import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/blog" element={<Blog />} />
             <Route path="/contato" element={<Contact />} />
             <Route path="/vip" element={<VIP />} />
+            <Route path="/vendas" element={<Sales />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

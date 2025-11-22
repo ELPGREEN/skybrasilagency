@@ -13,6 +13,7 @@ const Navbar = () => {
     { name: "Para Streamers", path: "/streamers" },
     { name: "Para Empresas", path: "/empresas" },
     { name: "Como Funciona", path: "/como-funciona" },
+    { name: "Plataforma", path: "/plataforma" },
     { name: "Blog", path: "/blog" },
     { name: "Contato", path: "/contato" },
   ];

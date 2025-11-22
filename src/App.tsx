@@ -9,6 +9,7 @@ import About from "./pages/About";
 import ForStreamers from "./pages/ForStreamers";
 import ForBrands from "./pages/ForBrands";
 import HowItWorks from "./pages/HowItWorks";
+import Platform from "./pages/Platform";
 import Blog from "./pages/Blog";
 import Contact from "./pages/Contact";
 import VIP from "./pages/VIP";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/streamers" element={<ForStreamers />} />
             <Route path="/empresas" element={<ForBrands />} />
             <Route path="/como-funciona" element={<HowItWorks />} />
+            <Route path="/plataforma" element={<Platform />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/contato" element={<Contact />} />
             <Route path="/vip" element={<VIP />} />

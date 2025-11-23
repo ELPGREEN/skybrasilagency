@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
+import { useCart } from "@/contexts/CartContext";
 
 interface Product {
   id: number;
@@ -82,6 +82,7 @@ const products: Product[] = [
 const Sales = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { addItem } = useCart();
 
   const handleBuyClick = (product: Product) => {
     setSelectedProduct(product);
@@ -89,11 +90,14 @@ const Sales = () => {
   };
 
   const handleConfirmPurchase = () => {
-    toast({
-      title: "Produto adicionado!",
-      description: `${selectedProduct?.name} foi adicionado ao carrinho. Em breve você será redirecionado para o checkout.`,
-      duration: 5000,
-    });
+    if (selectedProduct) {
+      addItem({
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        image: selectedProduct.image,
+      });
+    }
     setIsDialogOpen(false);
   };
 

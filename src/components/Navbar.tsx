@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CartSheet } from "./CartSheet";
 import logo from "@/assets/logo.png";
 
 const Navbar = () => {
@@ -42,18 +43,22 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+            <CartSheet />
             <Button variant="hero" size="lg" asChild>
               <Link to="/vip">Entrar na Lista VIP</Link>
             </Button>
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 text-foreground"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="lg:hidden flex items-center gap-2">
+            <CartSheet />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-foreground"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}

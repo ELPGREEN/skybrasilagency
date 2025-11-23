@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ShoppingCart, Check, Star, Zap } from "lucide-react";
+import { ShoppingCart, Check, Star, Zap, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/contexts/CartContext";
 
 interface Product {
@@ -79,9 +81,14 @@ const products: Product[] = [
   }
 ];
 
+type SortOption = "relevance" | "price-asc" | "price-desc" | "popular" | "newest";
+type CategoryFilter = "all" | "Digital" | "Premium" | "VIP" | "Enterprise";
+
 const Sales = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("relevance");
   const { addItem } = useCart();
 
   const handleBuyClick = (product: Product) => {
@@ -100,6 +107,51 @@ const Sales = () => {
     }
     setIsDialogOpen(false);
   };
+
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
+    let result = [...products];
+
+    // Apply category filter
+    if (categoryFilter !== "all") {
+      result = result.filter((product) => product.category === categoryFilter);
+    }
+
+    // Apply sorting
+    switch (sortOption) {
+      case "price-asc":
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case "price-desc":
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case "popular":
+        // Featured products first, then by badge priority
+        result.sort((a, b) => {
+          if (a.featured && !b.featured) return -1;
+          if (!a.featured && b.featured) return 1;
+          return 0;
+        });
+        break;
+      case "newest":
+        // Products with "Novo" badge first
+        result.sort((a, b) => {
+          if (a.badge === "Novo" && b.badge !== "Novo") return -1;
+          if (a.badge !== "Novo" && b.badge === "Novo") return 1;
+          return 0;
+        });
+        break;
+      default:
+        // Relevance: featured products first
+        result.sort((a, b) => {
+          if (a.featured && !b.featured) return -1;
+          if (!a.featured && b.featured) return 1;
+          return 0;
+        });
+    }
+
+    return result;
+  }, [categoryFilter, sortOption]);
 
   return (
     <div className="min-h-screen bg-gradient-tech">
@@ -125,11 +177,72 @@ const Sales = () => {
         </motion.div>
       </section>
 
+      {/* Filters and Sorting */}
+      <section className="py-8 px-4 border-b border-border/30">
+        <div className="container mx-auto">
+          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+            {/* Category Filters */}
+            <div className="w-full lg:w-auto">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Filtrar por categoria:</span>
+              </div>
+              <Tabs value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}>
+                <TabsList className="grid grid-cols-5 w-full lg:w-auto">
+                  <TabsTrigger value="all">Todos</TabsTrigger>
+                  <TabsTrigger value="Digital">Digital</TabsTrigger>
+                  <TabsTrigger value="Premium">Premium</TabsTrigger>
+                  <TabsTrigger value="VIP">VIP</TabsTrigger>
+                  <TabsTrigger value="Enterprise">Enterprise</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Sort Options */}
+            <div className="w-full lg:w-auto">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-medium text-muted-foreground">Ordenar por:</span>
+              </div>
+              <Select value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
+                <SelectTrigger className="w-full lg:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="relevance">Relevância</SelectItem>
+                  <SelectItem value="popular">Mais Vendidos</SelectItem>
+                  <SelectItem value="newest">Lançamentos</SelectItem>
+                  <SelectItem value="price-asc">Menor Preço</SelectItem>
+                  <SelectItem value="price-desc">Maior Preço</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div className="mt-6">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {filteredAndSortedProducts.length} {filteredAndSortedProducts.length === 1 ? "produto" : "produtos"}
+              {categoryFilter !== "all" && ` na categoria ${categoryFilter}`}
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Products Grid */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {products.map((product, index) => (
+          {filteredAndSortedProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg mb-4">
+                Nenhum produto encontrado nesta categoria.
+              </p>
+              <Button onClick={() => setCategoryFilter("all")} variant="outline">
+                Ver todos os produtos
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredAndSortedProducts.map((product, index) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -191,9 +304,10 @@ const Sales = () => {
                     </Button>
                   </CardFooter>
                 </Card>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

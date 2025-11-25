@@ -1,7 +1,15 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import {
   Target,
   TrendingUp,
@@ -11,10 +19,55 @@ import {
   Shield,
   BarChart3,
   Zap,
+  Rocket,
+  DollarSign,
+  Star,
 } from "lucide-react";
-import heroBg from "@/assets/hero-bg.jpg";
+import Autoplay from "embla-carousel-autoplay";
+import heroCarousel1 from "@/assets/hero-carousel-1.jpg";
+import heroCarousel2 from "@/assets/hero-carousel-2.jpg";
+import heroCarousel3 from "@/assets/hero-carousel-3.jpg";
+
+const AnimatedCounter = ({ end, duration = 2 }: { end: number; duration?: number }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
+      
+      setCount(Math.floor(progress * end));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [end, duration]);
+
+  return <span>{count}+</span>;
+};
 
 const Home = () => {
+  const plugin = useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: false })
+  );
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 300], [0, -50]);
+  const opacity1 = useTransform(scrollY, [0, 300], [1, 0]);
+
+  const carouselImages = [
+    { src: heroCarousel1, title: "Setup Profissional", subtitle: "Tecnologia de Ponta" },
+    { src: heroCarousel2, title: "Sucesso Garantido", subtitle: "Celebre suas Conquistas" },
+    { src: heroCarousel3, title: "Crescimento Exponencial", subtitle: "Dados e Estratégia" },
+  ];
+
   const features = [
     {
       icon: Target,
@@ -58,6 +111,13 @@ const Home = () => {
     },
   ];
 
+  const stats = [
+    { icon: Users, value: 500, label: "Streamers Ativos" },
+    { icon: DollarSign, value: 2000000, label: "Em Receita Gerada", prefix: "R$" },
+    { icon: Rocket, value: 150, label: "Marcas Conectadas" },
+    { icon: Star, value: 98, label: "Taxa de Satisfação", suffix: "%" },
+  ];
+
   const platforms = [
     { name: "Twitch", color: "text-[#9146FF]" },
     { name: "YouTube", color: "text-[#FF0000]" },
@@ -66,49 +126,157 @@ const Home = () => {
   ];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section
-        className="relative min-h-screen flex items-center justify-center overflow-hidden"
-        style={{
-          backgroundImage: `url(${heroBg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+    <div className="min-h-screen overflow-hidden">
+      {/* Hero Section with Carousel */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Carousel */}
+        <div className="absolute inset-0">
+          <Carousel
+            plugins={[plugin.current]}
+            className="w-full h-full"
+            opts={{
+              loop: true,
+            }}
+          >
+            <CarouselContent className="h-screen">
+              {carouselImages.map((image, index) => (
+                <CarouselItem key={index} className="h-screen">
+                  <div className="relative w-full h-full">
+                    <img
+                      src={image.src}
+                      alt={image.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/70 to-background/90" />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+        </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          style={{ y: y1, opacity: opacity1 }}
+          className="container mx-auto px-4 relative z-10"
+        >
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
             className="text-center max-w-4xl mx-auto"
           >
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient-primary">
-              Transformando Lives em Negócios
-            </h1>
-            <p className="text-xl md:text-2xl text-foreground/90 mb-8 leading-relaxed">
-              Transformamos Streamers em Parceiros de Alta Conversão para Marcas.
-              <br />
-              Criando Negócios Sustentáveis.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="hero" size="lg" asChild>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient-primary animate-fade-in">
+                Transformando Lives em Negócios
+              </h1>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              <p className="text-xl md:text-2xl text-foreground/90 mb-8 leading-relaxed">
+                Transformamos Streamers em Parceiros de Alta Conversão para Marcas.
+                <br />
+                Criando Negócios Sustentáveis.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+            >
+              <Button 
+                variant="hero" 
+                size="lg" 
+                asChild 
+                className="hover-scale glow-primary"
+              >
                 <Link to="/vip">Quero entrar na Lista VIP</Link>
               </Button>
-              <Button variant="secondary" size="lg" asChild>
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                asChild
+                className="hover-scale"
+              >
                 <Link to="/como-funciona">Como Funciona</Link>
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
+        </motion.div>
+
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.5 }}
+          className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10"
+        >
+          <motion.div
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-6 h-10 border-2 border-primary/50 rounded-full flex justify-center"
+          >
+            <motion.div
+              animate={{ y: [0, 12, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-1 h-3 bg-primary rounded-full mt-2"
+            />
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 bg-gradient-to-b from-background to-background/50 relative">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  whileHover={{ scale: 1.05 }}
+                  className="text-center"
+                >
+                  <Card className="bg-card/50 backdrop-blur border-border hover:border-primary transition-smooth hover:glow-primary">
+                    <CardContent className="p-6">
+                      <Icon className="w-12 h-12 text-primary mx-auto mb-4" />
+                      <div className="text-4xl font-bold text-gradient-primary mb-2">
+                        {stat.prefix}
+                        <AnimatedCounter end={stat.value} />
+                        {stat.suffix}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
       {/* About Section */}
-      <section className="py-20 bg-gradient-tech">
-        <div className="container mx-auto px-4">
+      <section className="py-20 bg-gradient-tech relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+        
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -138,12 +306,17 @@ const Home = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
+                  whileHover={{ y: -10 }}
                 >
                   <Card className="h-full bg-card/50 backdrop-blur border-border hover:border-primary transition-smooth hover:glow-primary group">
                     <CardContent className="p-6 text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-smooth">
+                      <motion.div
+                        whileHover={{ rotate: 360, scale: 1.1 }}
+                        transition={{ duration: 0.6 }}
+                        className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-smooth"
+                      >
                         <Icon className="w-8 h-8 text-primary" />
-                      </div>
+                      </motion.div>
                       <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                       <p className="text-sm text-muted-foreground">
                         {feature.description}
@@ -158,7 +331,7 @@ const Home = () => {
       </section>
 
       {/* Platforms Section */}
-      <section className="py-20 bg-background">
+      <section className="py-20 bg-background relative">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -181,6 +354,7 @@ const Home = () => {
                 whileInView={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
+                whileHover={{ scale: 1.2, rotate: 5 }}
                 className="text-center"
               >
                 <div className="w-24 h-24 rounded-full bg-card border-2 border-border flex items-center justify-center mb-3 hover:border-primary transition-smooth hover:glow-primary">
@@ -198,6 +372,25 @@ const Home = () => {
       {/* CTA Section */}
       <section className="py-20 bg-gradient-primary relative overflow-hidden">
         <div className="absolute inset-0 bg-background/10" />
+        
+        {/* Animated Background Elements */}
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 180, 360],
+          }}
+          transition={{ duration: 20, repeat: Infinity }}
+          className="absolute top-10 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1.2, 1, 1.2],
+            rotate: [360, 180, 0],
+          }}
+          transition={{ duration: 25, repeat: Infinity }}
+          className="absolute bottom-10 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl"
+        />
+
         <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -205,21 +398,38 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            <motion.h2
+              initial={{ scale: 0.9 }}
+              whileInView={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="text-4xl md:text-5xl font-bold mb-6 text-white"
+            >
               Pronto para Transformar sua Carreira?
-            </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-xl text-white/90 mb-8 max-w-2xl mx-auto"
+            >
               Junte-se aos streamers que estão construindo negócios sustentáveis com
               a SKY BRASIL
-            </p>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="bg-white text-primary hover:bg-white/90"
-              asChild
+            </motion.p>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Link to="/vip">Entrar na Lista VIP Agora</Link>
-            </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                className="bg-white text-primary hover:bg-white/90 hover:glow-accent"
+                asChild
+              >
+                <Link to="/vip">Entrar na Lista VIP Agora</Link>
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </section>

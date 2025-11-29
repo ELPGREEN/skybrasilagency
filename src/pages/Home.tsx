@@ -1,14 +1,12 @@
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
 import {
   Target,
@@ -22,11 +20,13 @@ import {
   Rocket,
   DollarSign,
   Star,
+  ArrowRight,
 } from "lucide-react";
 import Autoplay from "embla-carousel-autoplay";
 import heroCarousel1 from "@/assets/hero-carousel-1.jpg";
 import heroCarousel2 from "@/assets/hero-carousel-2.jpg";
 import heroCarousel3 from "@/assets/hero-carousel-3.jpg";
+import { HeroScene } from "@/components/3d/HeroScene";
 
 const AnimatedCounter = ({ end, duration = 2 }: { end: number; duration?: number }) => {
   const [count, setCount] = useState(0);
@@ -73,41 +73,49 @@ const Home = () => {
       icon: Target,
       title: "Acesso a Marcas",
       description: "Conectamos você com as melhores marcas do mercado",
+      link: "/para-empresas",
     },
     {
       icon: TrendingUp,
       title: "Monetizar seu Conteúdo",
       description: "Transforme suas lives em fonte de renda sustentável",
+      link: "/para-streamers",
     },
     {
       icon: Sparkles,
       title: "Treinamento Especializado",
       description: "Aprenda estratégias de alta conversão com experts",
+      link: "/para-streamers",
     },
     {
       icon: Shield,
       title: "Estratégia Personalizada",
       description: "Plano sob medida para seu crescimento",
+      link: "/como-funciona",
     },
     {
       icon: BarChart3,
       title: "Suporte OBS",
       description: "Configuração técnica completa para suas lives",
+      link: "/para-streamers",
     },
     {
       icon: Award,
       title: "Identidade Visual",
       description: "Branding profissional para se destacar",
+      link: "/para-streamers",
     },
     {
       icon: Users,
       title: "Comunidade Exclusiva",
       description: "Rede de creators para networking e trocas",
+      link: "/vip",
     },
     {
       icon: Zap,
       title: "Mentoria de Conteúdo",
       description: "Orientação contínua para melhorar suas lives",
+      link: "/contato",
     },
   ];
 
@@ -127,16 +135,14 @@ const Home = () => {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* Hero Section with Carousel */}
+      {/* Hero Section with 3D and Carousel */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Background Carousel */}
         <div className="absolute inset-0">
           <Carousel
             plugins={[plugin.current]}
             className="w-full h-full"
-            opts={{
-              loop: true,
-            }}
+            opts={{ loop: true }}
           >
             <CarouselContent className="h-screen">
               {carouselImages.map((image, index) => (
@@ -147,13 +153,18 @@ const Home = () => {
                       alt={image.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/70 to-background/90" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/80 to-background" />
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
           </Carousel>
         </div>
+
+        {/* 3D Scene Overlay */}
+        <Suspense fallback={null}>
+          <HeroScene />
+        </Suspense>
 
         <motion.div
           style={{ y: y1, opacity: opacity1 }}
@@ -165,12 +176,21 @@ const Home = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-center max-w-4xl mx-auto"
           >
+            {/* Glowing Title */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
+              className="relative"
             >
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient-primary animate-fade-in">
+              <motion.span
+                className="absolute inset-0 text-5xl md:text-7xl font-bold text-primary blur-2xl opacity-50"
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                Transformando Lives em Negócios
+              </motion.span>
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient-primary relative">
                 Transformando Lives em Negócios
               </h1>
             </motion.div>
@@ -183,7 +203,7 @@ const Home = () => {
               <p className="text-xl md:text-2xl text-foreground/90 mb-8 leading-relaxed">
                 Transformamos Streamers em Parceiros de Alta Conversão para Marcas.
                 <br />
-                Criando Negócios Sustentáveis.
+                <span className="text-primary font-semibold">Criando Negócios Sustentáveis.</span>
               </p>
             </motion.div>
 
@@ -197,15 +217,23 @@ const Home = () => {
                 variant="hero" 
                 size="lg" 
                 asChild 
-                className="hover-scale glow-primary"
+                className="hover-scale glow-primary group"
               >
-                <Link to="/vip">Quero entrar na Lista VIP</Link>
+                <Link to="/vip" className="flex items-center gap-2">
+                  Quero entrar na Lista VIP
+                  <motion.span
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.span>
+                </Link>
               </Button>
               <Button 
                 variant="secondary" 
                 size="lg" 
                 asChild
-                className="hover-scale"
+                className="hover-scale backdrop-blur-sm"
               >
                 <Link to="/como-funciona">Como Funciona</Link>
               </Button>
@@ -223,7 +251,7 @@ const Home = () => {
           <motion.div
             animate={{ y: [0, 10, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="w-6 h-10 border-2 border-primary/50 rounded-full flex justify-center"
+            className="w-6 h-10 border-2 border-primary/50 rounded-full flex justify-center backdrop-blur-sm"
           >
             <motion.div
               animate={{ y: [0, 12, 0] }}
@@ -308,21 +336,26 @@ const Home = () => {
                   viewport={{ once: true }}
                   whileHover={{ y: -10 }}
                 >
-                  <Card className="h-full bg-card/50 backdrop-blur border-border hover:border-primary transition-smooth hover:glow-primary group">
-                    <CardContent className="p-6 text-center">
-                      <motion.div
-                        whileHover={{ rotate: 360, scale: 1.1 }}
-                        transition={{ duration: 0.6 }}
-                        className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-smooth"
-                      >
-                        <Icon className="w-8 h-8 text-primary" />
-                      </motion.div>
-                      <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <Link to={feature.link}>
+                    <Card className="h-full bg-card/50 backdrop-blur border-border hover:border-primary transition-smooth hover:glow-primary group cursor-pointer">
+                      <CardContent className="p-6 text-center">
+                        <motion.div
+                          whileHover={{ rotate: 360, scale: 1.1 }}
+                          transition={{ duration: 0.6 }}
+                          className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-smooth"
+                        >
+                          <Icon className="w-8 h-8 text-primary" />
+                        </motion.div>
+                        <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-smooth">{feature.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {feature.description}
+                        </p>
+                        <span className="inline-flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-smooth">
+                          Saiba mais <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </motion.div>
               );
             })}

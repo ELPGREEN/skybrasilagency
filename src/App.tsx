@@ -27,6 +27,7 @@ const App = () => (
       <BrowserRouter>
         <Layout>
           <Routes>
+        <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/sobre" element={<About />} />
             <Route path="/streamers" element={<ForStreamers />} />
@@ -38,8 +39,13 @@ const App = () => (
             <Route path="/vip" element={<VIP />} />
             <Route path="/vendas" element={<Sales />} />
             <Route path="/checkout" element={<Checkout />} />
+            
+            {/* 👇 NOVA ROTA ADICIONADA - SUPORTE OBS */}
+            <Route path="/suporte-obs" element={<SuporteOBS />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
+          </Routes>
           </Routes>
         </Layout>
       </BrowserRouter>

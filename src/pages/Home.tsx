@@ -97,7 +97,7 @@ const Home = () => {
       icon: BarChart3,
       title: "Suporte OBS",
       description: "Configuração técnica completa para suas lives",
-      link: "/para-streamers",
+      link: "/suporte-obs",
     },
     {
       icon: Award,

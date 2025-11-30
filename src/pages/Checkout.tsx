@@ -1,139 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, MapPin, User, Mail, Phone, Loader2, CheckCircle } from "lucide-react";
+import { ArrowLeft, CreditCard, MapPin, User, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
-import EfiPay from 'payment-token-efi';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
-  
-  // ✅ ESTADOS EFI PAY
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentData, setPaymentData] = useState({
-    cardNumber: '',
-    holderName: '',
-    cvv: '',
-    expirationMonth: '',
-    expirationYear: '',
-    installments: '1',
-    brand: ''
-  });
-  const [installmentsOptions, setInstallmentsOptions] = useState<any[]>([]);
-  const [paymentError, setPaymentError] = useState('');
 
-  // ✅ CONFIG EFI PAY (EXECUTA UMA VEZ)
-  useEffect(() => {
-    EfiPay.CreditCard
-      .setAccount(import.meta.env.VITE_EFI_PAYEE_CODE || 'SEU_PAYEE_CODE_AQUI')
-      .setEnvironment('sandbox') // MUDE PARA 'production' DEPOIS
-      .debugger(true); // REMOVE EM PRODUÇÃO
-  }, []);
-
-  // ✅ DETECTAR BANDEIRA E PARCELAS
-  const detectCardBrand = async (cardNumber: string) => {
-    try {
-      const brand = await EfiPay.CreditCard
-        .setCardNumber(cardNumber.replace(/\s/g, ''))
-        .verifyCardBrand();
-      
-      setPaymentData(prev => ({ ...prev, brand }));
-      setPaymentError('');
-      
-      if (brand) {
-        const installments = await EfiPay.CreditCard
-          .setBrand(brand)
-          .setTotal(total * 100) // Centavos
-          .getInstallments();
-        setInstallmentsOptions(installments);
-      }
-    } catch (err: any) {
-      setPaymentError('Cartão inválido');
-      setPaymentData(prev => ({ ...prev, brand: '' }));
-    }
-  };
-
-  // ✅ PROCESSAR PAGAMENTO REAL
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-    setPaymentError('');
 
-    // Validar bandeira
-    if (!paymentData.brand) {
-      setPaymentError('Insira um cartão válido para detectar a bandeira');
-      setIsProcessing(false);
-      return;
-    }
-
-    try {
-      // ✅ GERAR TOKEN EFI PAY
-      const tokenData = await EfiPay.CreditCard
-        .setCreditCardData({
-          brand: paymentData.brand,
-          number: paymentData.cardNumber.replace(/\s/g, ''),
-          cvv: paymentData.cvv,
-          expirationMonth: paymentData.expirationMonth,
-          expirationYear: paymentData.expirationYear,
-          holderName: paymentData.holderName,
-          holderDocument: (document.getElementById('cpf') as HTMLInputElement)?.value.replace(/\D/g, '') || '',
-          reuse: false
-        })
-        .getPaymentToken();
-
-      console.log('✅ TOKEN GERADO:', tokenData);
-
-      // ✅ ENVIAR PARA BACK-END (SIMULAÇÃO TEMPORÁRIA)
-      // SUBSTITUA POR SEU ENDPOINT REAL: fetch('/api/efipay/cobranca', ...)
-      const paymentResponse = {
-        status: 'approved',
-        charge_id: 'CHARGE_' + Date.now(),
-        payment_token: tokenData.payment_token
-      };
-
-      // ✅ SIMULA BACK-END (REMOVA DEPOIS)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // ✅ SUCESSO
+    // Simular processamento de pagamento
+    setTimeout(() => {
       toast({
-        title: "✅ Pagamento Aprovado!",
-        description: `Cobrança ${paymentResponse.charge_id} processada com sucesso!`,
+        title: "Pedido confirmado!",
+        description: "Seu pedido foi processado com sucesso. Em breve você receberá os detalhes por e-mail.",
         duration: 5000,
       });
-      
       clearCart();
       setIsProcessing(false);
       navigate("/");
-
-    } catch (err: any) {
-      console.error('❌ ERRO EFI PAY:', err);
-      const errorMsg = err.message || 'Erro ao processar pagamento';
-      setPaymentError(errorMsg);
-      toast({
-        title: "❌ Erro no Pagamento",
-        description: errorMsg,
-        variant: "destructive",
-        duration: 5000,
-      });
-      setIsProcessing(false);
-    }
-  };
-
-  // Formatar cartão
-  const formatCardNumber = (value: string) => {
-    return value
-      .replace(/\s/g, '')
-      .replace(/(.{4})/g, '$1 ')
-      .trim()
-      .substring(0, 19);
+    }, 2000);
   };
 
   if (items.length === 0) {
@@ -245,142 +140,31 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
-            {/* ✅ SEÇÃO PAGAMENTO EFI PAY */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="w-5 h-5" />
-                  Pagamento com Cartão
+                  Pagamento
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Número do Cartão */}
-                <div className="space-y-2">
+                <div>
                   <Label htmlFor="cardNumber">Número do Cartão</Label>
-                  <Input 
-                    id="cardNumber"
-                    value={paymentData.cardNumber}
-                    onChange={(e) => {
-                      const formatted = formatCardNumber(e.target.value);
-                      setPaymentData(prev => ({ ...prev, cardNumber: formatted }));
-                      
-                      const clean = formatted.replace(/\s/g, '');
-                      if (clean.length >= 6) {
-                        detectCardBrand(clean);
-                      }
-                    }}
-                    placeholder="0000 0000 0000 0000"
-                    className="text-lg h-12"
-                    required
-                  />
-                  {paymentData.brand && (
-                    <p className="text-sm text-green-600 flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      Bandeira: <span className="font-mono uppercase">{paymentData.brand}</span>
-                    </p>
-                  )}
+                  <Input id="cardNumber" placeholder="0000 0000 0000 0000" required />
                 </div>
-
-                {/* Nome e Parcelas */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cardName">Nome no Cartão</Label>
-                    <Input 
-                      id="cardName"
-                      value={paymentData.holderName}
-                      onChange={(e) => setPaymentData(prev => ({ ...prev, holderName: e.target.value }))}
-                      placeholder="Nome impresso no cartão"
-                      required
-                    />
+                  <div>
+                    <Label htmlFor="expiry">Validade</Label>
+                    <Input id="expiry" placeholder="MM/AA" required />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Parcelas</Label>
-                    <Select 
-                      value={paymentData.installments} 
-                      onValueChange={(value) => setPaymentData(prev => ({ ...prev, installments: value }))}
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="1x sem juros" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1x de R$ {(total).toFixed(2)} (sem juros)</SelectItem>
-                        {installmentsOptions.map((inst: any) => (
-                          <SelectItem key={inst.installments} value={inst.installments.toString()}>
-                            {inst.installments}x de R$ {(inst.payment_value / 100).toFixed(2)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div>
+                    <Label htmlFor="cvv">CVV</Label>
+                    <Input id="cvv" placeholder="123" required />
                   </div>
                 </div>
-
-                {/* Validade */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Validade (Mês)</Label>
-                    <Select 
-                      onValueChange={(value) => setPaymentData(prev => ({ ...prev, expirationMonth: value }))}
-                      required
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="MM" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({length: 12}, (_, i) => 
-                          String(i + 1).padStart(2, '0')
-                        ).map(month => (
-                          <SelectItem key={month} value={month}>{month}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Validade (Ano)</Label>
-                    <Select 
-                      onValueChange={(value) => setPaymentData(prev => ({ ...prev, expirationYear: value }))}
-                      required
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="AAAA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({length: 10}, (_, i) => 
-                          (new Date().getFullYear() + i).toString()
-                        ).map(year => (
-                          <SelectItem key={year} value={year}>{year}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* CVV */}
-                <div className="space-y-2">
-                  <Label htmlFor="cvv">CVV</Label>
-                  <Input 
-                    id="cvv"
-                    type="number"
-                    value={paymentData.cvv}
-                    onChange={(e) => setPaymentData(prev => ({ ...prev, cvv: e.target.value }))}
-                    placeholder="123"
-                    maxLength={3}
-                    className="h-10"
-                    required
-                  />
-                </div>
-
-                {/* Erro */}
-                {paymentError && (
-                  <Alert variant="destructive" className="border-red-200">
-                    <AlertDescription>{paymentError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-muted-foreground flex items-center gap-2">
-                    <CreditCard className="w-3 h-3" />
-                    Pagamento 100% seguro via <strong>EfiPay</strong>
-                  </p>
+                <div>
+                  <Label htmlFor="cardName">Nome no Cartão</Label>
+                  <Input id="cardName" placeholder="Nome impresso no cartão" required />
                 </div>
               </CardContent>
             </Card>
@@ -432,19 +216,11 @@ const Checkout = () => {
                 </div>
 
                 <Button
-                  type="submit"
-                  form="checkout-form" // ✅ Conecta com o form
-                  disabled={isProcessing || !paymentData.brand}
+                  onClick={handleSubmit}
+                  disabled={isProcessing}
                   className="w-full bg-gradient-primary hover:shadow-glow-primary"
                 >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando Pagamento...
-                    </>
-                  ) : (
-                    "Finalizar Pedido"
-                  )}
+                  {isProcessing ? "Processando..." : "Finalizar Pedido"}
                 </Button>
 
                 <div className="text-xs text-muted-foreground text-center pt-2">
@@ -455,11 +231,6 @@ const Checkout = () => {
           </div>
         </motion.div>
       </div>
-
-      {/* ✅ FORM INVISÍVEL PARA SUBMIT */}
-      <form id="checkout-form" onSubmit={handleSubmit} className="hidden">
-        <input type="submit" />
-      </form>
     </div>
   );
 };

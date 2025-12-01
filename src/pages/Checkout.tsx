@@ -1,34 +1,132 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, MapPin, User, Mail, Phone } from "lucide-react";
+import { ArrowLeft, CreditCard, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
+import { useEfiPayment } from "@/hooks/useEfiPayment";
+import { initEfiPay } from "@/lib/efiConfig";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { processPayment, isProcessing } = useEfiPayment();
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    cpf: '',
+    cep: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    cardNumber: '',
+    cardName: '',
+    expiry: '',
+    cvv: '',
+  });
+
+  // Inicializar EfíPay SDK ao montar o componente
+  useEffect(() => {
+    // IMPORTANTE: Substitua 'SEU_PAYEE_CODE' pelo seu payee_code da EfíPay
+    const PAYEE_CODE = 'SEU_PAYEE_CODE_AQUI';
+    const ENVIRONMENT = 'sandbox'; // ou 'production'
+    
+    initEfiPay(PAYEE_CODE, ENVIRONMENT as 'sandbox' | 'production').catch((error) => {
+      console.error('Erro ao inicializar EfíPay:', error);
+      toast({
+        title: "Erro de inicialização",
+        description: "Não foi possível carregar o sistema de pagamento. Recarregue a página.",
+        variant: "destructive",
+      });
+    });
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
 
-    // Simular processamento de pagamento
-    setTimeout(() => {
+    // Validações básicas
+    if (!formData.name || !formData.email || !formData.cpf || !formData.phone) {
       toast({
-        title: "Pedido confirmado!",
-        description: "Seu pedido foi processado com sucesso. Em breve você receberá os detalhes por e-mail.",
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.cardNumber || !formData.cvv || !formData.expiry) {
+      toast({
+        title: "Dados do cartão incompletos",
+        description: "Preencha todos os dados do cartão.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Separar mês e ano da validade
+    const [expiryMonth, expiryYear] = formData.expiry.split('/');
+    
+    // Preparar dados do pagamento
+    const paymentData = {
+      cardNumber: formData.cardNumber,
+      cardName: formData.cardName,
+      expiryMonth: expiryMonth.trim(),
+      expiryYear: `20${expiryYear.trim()}`,
+      cvv: formData.cvv,
+      customer: {
+        name: formData.name,
+        email: formData.email,
+        cpf: formData.cpf,
+        phone: formData.phone,
+      },
+      address: {
+        street: formData.street,
+        number: formData.number,
+        neighborhood: formData.neighborhood,
+        zipcode: formData.cep,
+        city: formData.city,
+        complement: formData.complement,
+      },
+      items: items.map(item => ({
+        name: item.name,
+        value: item.price,
+        amount: item.quantity,
+      })),
+    };
+
+    // Processar pagamento
+    const result = await processPayment(paymentData);
+
+    if (result.success) {
+      toast({
+        title: "Pagamento confirmado!",
+        description: `Seu pedido foi processado com sucesso. ID: ${result.charge_id}`,
         duration: 5000,
       });
       clearCart();
-      setIsProcessing(false);
       navigate("/");
-    }, 2000);
+    } else {
+      toast({
+        title: "Erro no pagamento",
+        description: result.error || "Não foi possível processar o pagamento. Tente novamente.",
+        variant: "destructive",
+        duration: 7000,
+      });
+    }
   };
 
   if (items.length === 0) {
@@ -80,19 +178,45 @@ const Checkout = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">Nome Completo</Label>
-                      <Input id="name" placeholder="Seu nome" required />
+                      <Input 
+                        id="name" 
+                        placeholder="Seu nome" 
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="email">E-mail</Label>
-                      <Input id="email" type="email" placeholder="seu@email.com" required />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="seu@email.com"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="phone">Telefone</Label>
-                      <Input id="phone" type="tel" placeholder="(00) 00000-0000" required />
+                      <Input 
+                        id="phone" 
+                        type="tel" 
+                        placeholder="(00) 00000-0000"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="cpf">CPF</Label>
-                      <Input id="cpf" placeholder="000.000.000-00" required />
+                      <Input 
+                        id="cpf" 
+                        placeholder="000.000.000-00"
+                        value={formData.cpf}
+                        onChange={handleInputChange}
+                        required 
+                      />
                     </div>
                   </div>
                 </form>
@@ -110,31 +234,66 @@ const Checkout = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <Label htmlFor="cep">CEP</Label>
-                    <Input id="cep" placeholder="00000-000" required />
+                    <Input 
+                      id="cep" 
+                      placeholder="00000-000"
+                      value={formData.cep}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="street">Rua</Label>
-                  <Input id="street" placeholder="Nome da rua" required />
+                  <Input 
+                    id="street" 
+                    placeholder="Nome da rua"
+                    value={formData.street}
+                    onChange={handleInputChange}
+                    required 
+                  />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="number">Número</Label>
-                    <Input id="number" placeholder="123" required />
+                    <Input 
+                      id="number" 
+                      placeholder="123"
+                      value={formData.number}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="complement">Complemento</Label>
-                    <Input id="complement" placeholder="Apto, Bloco, etc" />
+                    <Input 
+                      id="complement" 
+                      placeholder="Apto, Bloco, etc"
+                      value={formData.complement}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="neighborhood">Bairro</Label>
-                    <Input id="neighborhood" placeholder="Bairro" required />
+                    <Input 
+                      id="neighborhood" 
+                      placeholder="Bairro"
+                      value={formData.neighborhood}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                   <div>
                     <Label htmlFor="city">Cidade</Label>
-                    <Input id="city" placeholder="Cidade" required />
+                    <Input 
+                      id="city" 
+                      placeholder="Cidade"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required 
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -150,21 +309,48 @@ const Checkout = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="cardNumber">Número do Cartão</Label>
-                  <Input id="cardNumber" placeholder="0000 0000 0000 0000" required />
+                  <Input 
+                    id="cardNumber" 
+                    placeholder="0000 0000 0000 0000"
+                    value={formData.cardNumber}
+                    onChange={handleInputChange}
+                    maxLength={19}
+                    required 
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="expiry">Validade</Label>
-                    <Input id="expiry" placeholder="MM/AA" required />
+                    <Input 
+                      id="expiry" 
+                      placeholder="MM/AA"
+                      value={formData.expiry}
+                      onChange={handleInputChange}
+                      maxLength={5}
+                      required 
+                    />
                   </div>
                   <div>
                     <Label htmlFor="cvv">CVV</Label>
-                    <Input id="cvv" placeholder="123" required />
+                    <Input 
+                      id="cvv" 
+                      placeholder="123"
+                      value={formData.cvv}
+                      onChange={handleInputChange}
+                      maxLength={4}
+                      required 
+                    />
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="cardName">Nome no Cartão</Label>
-                  <Input id="cardName" placeholder="Nome impresso no cartão" required />
+                  <Input 
+                    id="cardName" 
+                    placeholder="Nome impresso no cartão"
+                    value={formData.cardName}
+                    onChange={handleInputChange}
+                    required 
+                  />
                 </div>
               </CardContent>
             </Card>

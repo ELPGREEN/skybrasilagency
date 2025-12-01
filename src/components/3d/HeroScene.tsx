@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Text3D, Center } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Float, Text, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Neon Particles floating around
@@ -127,15 +127,95 @@ const FloatingGem = ({ position = [0, 0, 0] as [number, number, number], color =
   );
 };
 
+// Morphing Text with WebGL Distortion
+const MorphingText = ({ position = [0, 1, 0] as [number, number, number] }) => {
+  const textRef = useRef<THREE.Mesh>(null);
+  const { viewport } = useThree();
+  
+  useFrame((state) => {
+    if (!textRef.current) return;
+    const time = state.clock.elapsedTime;
+    
+    // Subtle wave motion
+    textRef.current.position.y = position[1] + Math.sin(time * 0.5) * 0.1;
+    textRef.current.rotation.x = Math.sin(time * 0.3) * 0.05;
+    textRef.current.rotation.y = Math.sin(time * 0.2) * 0.02;
+  });
+
+  // Responsive scale based on viewport
+  const scale = Math.min(viewport.width / 8, 0.5);
+
+  return (
+    <Float speed={1} rotationIntensity={0.2} floatIntensity={0.3}>
+      <mesh ref={textRef} position={position} scale={scale}>
+        <sphereGeometry args={[2, 64, 64]} />
+        <MeshDistortMaterial
+          color="#ff4d9d"
+          attach="material"
+          distort={0.4}
+          speed={2}
+          roughness={0.2}
+          metalness={0.8}
+          emissive="#ff4d9d"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.15}
+        />
+      </mesh>
+    </Float>
+  );
+};
+
+// Distorted Background Spheres
+const DistortedSphere = ({ 
+  position = [0, 0, 0] as [number, number, number], 
+  color = '#00d4ff',
+  scale = 1
+}) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const time = state.clock.elapsedTime;
+    meshRef.current.rotation.x = time * 0.1;
+    meshRef.current.rotation.y = time * 0.15;
+  });
+
+  return (
+    <mesh ref={meshRef} position={position} scale={scale}>
+      <sphereGeometry args={[1, 32, 32]} />
+      <MeshDistortMaterial
+        color={color}
+        attach="material"
+        distort={0.6}
+        speed={3}
+        roughness={0}
+        metalness={1}
+        emissive={color}
+        emissiveIntensity={0.3}
+        transparent
+        opacity={0.1}
+      />
+    </mesh>
+  );
+};
+
 // Scene content
 const SceneContent = () => {
   return (
     <>
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={1} color="#ff4d9d" />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#00d4ff" />
+      <ambientLight intensity={0.3} />
+      <pointLight position={[10, 10, 10]} intensity={1.5} color="#ff4d9d" />
+      <pointLight position={[-10, -10, -10]} intensity={0.8} color="#00d4ff" />
+      <pointLight position={[0, 5, 5]} intensity={0.6} color="#a855f7" />
       
       <NeonParticles count={300} />
+      
+      {/* Morphing elements behind text */}
+      <MorphingText position={[0, 0, -4]} />
+      <DistortedSphere position={[-3, 2, -5]} color="#ff4d9d" scale={1.5} />
+      <DistortedSphere position={[3, -2, -6]} color="#00d4ff" scale={2} />
+      <DistortedSphere position={[0, -1, -7]} color="#a855f7" scale={1.8} />
       
       <GlowRing radius={4} color="#ff4d9d" position={[0, 0, -3]} />
       <GlowRing radius={3} color="#00d4ff" position={[0, 0, -2]} />

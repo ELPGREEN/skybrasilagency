@@ -1,5 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Carousel,
   CarouselContent,
@@ -13,9 +14,11 @@ import {
   Sparkles,
   Target,
   BarChart3,
+  Zap,
 } from "lucide-react";
 import { useRef } from "react";
 import Autoplay from "embla-carousel-autoplay";
+import { HowItWorksHeroScene } from "@/components/3d/HowItWorksHeroScene";
 import howItWorksHero from "@/assets/how-it-works-hero.jpg";
 import processOnboarding from "@/assets/process-onboarding.jpg";
 import processLaunch from "@/assets/process-launch.jpg";
@@ -72,10 +75,12 @@ const HowItWorks = () => {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* Hero Section with Carousel */}
+      {/* Hero Section with 3D WebGL Effects */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Carousel */}
-        <div className="absolute inset-0">
+        <HowItWorksHeroScene />
+        
+        {/* Background Carousel with modern styling */}
+        <div className="absolute inset-0 opacity-30">
           <Carousel
             plugins={[plugin.current]}
             className="w-full h-full"
@@ -92,7 +97,7 @@ const HowItWorks = () => {
                       alt={image.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/80 to-background/95" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/85 to-background/95" />
                   </div>
                 </CarouselItem>
               ))}
@@ -107,27 +112,31 @@ const HowItWorks = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
             className="text-center max-w-4xl mx-auto"
           >
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient-primary animate-fade-in">
-                Como Funciona
+              <Badge className="mb-6 bg-primary/20 text-primary border-primary animate-pulse">
+                <Zap className="w-3 h-3 mr-1" />
+                Processo Estruturado
+              </Badge>
+              <h1 className="text-6xl md:text-8xl font-bold mb-8 drop-shadow-glow animate-fade-in">
+                Como <span className="text-gradient-primary">Funciona</span>
               </h1>
             </motion.div>
             
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
             >
-              <p className="text-xl md:text-2xl text-foreground/90 mb-8 leading-relaxed">
+              <p className="text-xl md:text-3xl text-foreground/90 mb-8 leading-relaxed drop-shadow-lg">
                 Do cadastro às primeiras campanhas, veja o passo a passo para se tornar
-                um Streamer SKY BRASIL
+                um Streamer <span className="text-gradient-secondary font-bold">SKY BRASIL</span>
               </p>
             </motion.div>
           </motion.div>
@@ -223,7 +232,7 @@ const HowItWorks = () => {
             })}
           </div>
 
-          {/* Image Gallery */}
+          {/* Modern Image Gallery */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -231,6 +240,10 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             className="max-w-5xl mx-auto"
           >
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold mb-2">Jornada Visual</h3>
+              <p className="text-muted-foreground">Conheça as etapas do processo</p>
+            </div>
             <Carousel
               opts={{
                 align: "start",
@@ -242,18 +255,24 @@ const HowItWorks = () => {
                 {carouselImages.map((image, index) => (
                   <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                     <motion.div
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: 1.05, y: -5 }}
                       transition={{ duration: 0.3 }}
                       className="p-1"
                     >
-                      <Card className="overflow-hidden border-border hover:border-primary transition-smooth">
-                        <img
-                          src={image.src}
-                          alt={image.title}
-                          className="w-full h-64 object-cover"
-                        />
-                        <CardContent className="p-4 bg-card/80 backdrop-blur">
-                          <h3 className="font-semibold text-lg">{image.title}</h3>
+                      <Card className="group overflow-hidden border-border/50 hover:border-primary hover:shadow-glow-primary transition-smooth">
+                        <div className="relative overflow-hidden">
+                          <img
+                            src={image.src}
+                            alt={image.title}
+                            className="w-full h-64 object-cover group-hover:scale-110 transition-smooth"
+                          />
+                          <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-20 transition-smooth" />
+                          <Badge className="absolute top-4 right-4 bg-accent/90 backdrop-blur">
+                            Etapa {index + 1}
+                          </Badge>
+                        </div>
+                        <CardContent className="p-5 bg-card/90 backdrop-blur">
+                          <h3 className="font-bold text-lg mb-1 text-gradient-primary">{image.title}</h3>
                           <p className="text-sm text-muted-foreground">{image.subtitle}</p>
                         </CardContent>
                       </Card>
@@ -261,8 +280,8 @@ const HowItWorks = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
+              <CarouselPrevious className="left-2" />
+              <CarouselNext className="right-2" />
             </Carousel>
           </motion.div>
         </div>

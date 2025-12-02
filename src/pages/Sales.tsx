@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/contexts/CartContext";
+import { ShopHeroScene } from "@/components/3d/ShopHeroScene";
 
 interface Product {
   id: number;
@@ -155,23 +156,24 @@ const Sales = () => {
 
   return (
     <div className="min-h-screen bg-gradient-tech">
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-primary opacity-10"></div>
+      {/* Hero Section with 3D WebGL Effects */}
+      <section className="relative py-24 px-4 overflow-hidden min-h-[60vh] flex items-center">
+        <ShopHeroScene />
+        <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
           className="container mx-auto text-center relative z-10"
         >
-          <Badge className="mb-4 bg-primary/20 text-primary border-primary">
+          <Badge className="mb-6 bg-primary/20 text-primary border-primary animate-pulse">
             <Zap className="w-3 h-3 mr-1" />
             Ofertas Exclusivas
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 drop-shadow-glow">
             Loja <span className="text-gradient-primary">SKY</span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 drop-shadow-lg">
             Descubra nossos produtos e serviços premium para transformar seu negócio digital
           </p>
         </motion.div>

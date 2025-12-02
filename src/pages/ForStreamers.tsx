@@ -2,6 +2,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Carousel,
   CarouselContent,
@@ -15,9 +16,11 @@ import {
   Video,
   Palette,
   MessageCircle,
+  Zap,
 } from "lucide-react";
 import { useRef } from "react";
 import Autoplay from "embla-carousel-autoplay";
+import { StreamersHeroScene } from "@/components/3d/StreamersHeroScene";
 import streamersHero from "@/assets/streamers-hero.jpg";
 import streamersSuccess from "@/assets/streamers-success.jpg";
 import streamersTraining from "@/assets/streamers-training.jpg";
@@ -69,10 +72,12 @@ const ForStreamers = () => {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* Hero Section with Carousel */}
+      {/* Hero Section with Advanced 3D WebGL Effects */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Carousel */}
-        <div className="absolute inset-0">
+        <StreamersHeroScene />
+        
+        {/* Background Carousel with modern styling */}
+        <div className="absolute inset-0 opacity-25">
           <Carousel
             plugins={[plugin.current]}
             className="w-full h-full"
@@ -89,7 +94,7 @@ const ForStreamers = () => {
                       alt={image.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/80 to-background/95" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/85 to-background/95" />
                   </div>
                 </CarouselItem>
               ))}
@@ -104,26 +109,30 @@ const ForStreamers = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
             className="text-center max-w-4xl mx-auto"
           >
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient-primary animate-fade-in">
-                Venha ser um Streamer SKY
+              <Badge className="mb-6 bg-primary/20 text-primary border-primary animate-pulse">
+                <Zap className="w-3 h-3 mr-1" />
+                Seja um Creator de Sucesso
+              </Badge>
+              <h1 className="text-6xl md:text-8xl font-bold mb-8 drop-shadow-glow animate-fade-in">
+                Venha ser um <span className="text-gradient-primary">Streamer SKY</span>
               </h1>
             </motion.div>
             
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
             >
-              <p className="text-xl md:text-2xl text-foreground/90 mb-8 leading-relaxed">
-                Treinamos você para se tornar um creator de alta conversão para marcas,
+              <p className="text-xl md:text-3xl text-foreground/90 mb-10 leading-relaxed drop-shadow-lg">
+                Treinamos você para se tornar um creator de <span className="text-gradient-secondary font-bold">alta conversão</span> para marcas,
                 com carreira sustentável e crescimento consistente.
               </p>
             </motion.div>
@@ -131,14 +140,14 @@ const ForStreamers = () => {
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
+              transition={{ duration: 0.6, delay: 0.9 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <Button 
                 variant="hero" 
                 size="lg" 
                 asChild 
-                className="hover-scale glow-primary"
+                className="hover-scale glow-primary text-lg px-8"
               >
                 <Link to="/vip">Quero Ser Streamer</Link>
               </Button>
@@ -146,7 +155,7 @@ const ForStreamers = () => {
                 variant="secondary" 
                 size="lg" 
                 asChild
-                className="hover-scale"
+                className="hover-scale text-lg px-8"
               >
                 <Link to="/como-funciona">Saiba Mais</Link>
               </Button>
@@ -230,7 +239,7 @@ const ForStreamers = () => {
             })}
           </div>
 
-          {/* Image Gallery */}
+          {/* Modern Image Gallery */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -238,6 +247,10 @@ const ForStreamers = () => {
             viewport={{ once: true }}
             className="max-w-5xl mx-auto"
           >
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold mb-2">Jornada de Sucesso</h3>
+              <p className="text-muted-foreground">Veja como transformamos creators em profissionais</p>
+            </div>
             <Carousel
               opts={{
                 align: "start",
@@ -249,18 +262,24 @@ const ForStreamers = () => {
                 {carouselImages.map((image, index) => (
                   <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                     <motion.div
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: 1.05, y: -5 }}
                       transition={{ duration: 0.3 }}
                       className="p-1"
                     >
-                      <Card className="overflow-hidden border-border hover:border-primary transition-smooth">
-                        <img
-                          src={image.src}
-                          alt={image.title}
-                          className="w-full h-64 object-cover"
-                        />
-                        <CardContent className="p-4 bg-card/80 backdrop-blur">
-                          <h3 className="font-semibold text-lg">{image.title}</h3>
+                      <Card className="group overflow-hidden border-border/50 hover:border-primary hover:shadow-glow-primary transition-smooth">
+                        <div className="relative overflow-hidden">
+                          <img
+                            src={image.src}
+                            alt={image.title}
+                            className="w-full h-64 object-cover group-hover:scale-110 transition-smooth"
+                          />
+                          <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-20 transition-smooth" />
+                          <Badge className="absolute top-4 right-4 bg-accent/90 backdrop-blur">
+                            Benefício {index + 1}
+                          </Badge>
+                        </div>
+                        <CardContent className="p-5 bg-card/90 backdrop-blur">
+                          <h3 className="font-bold text-lg mb-1 text-gradient-primary">{image.title}</h3>
                           <p className="text-sm text-muted-foreground">{image.subtitle}</p>
                         </CardContent>
                       </Card>
@@ -268,8 +287,8 @@ const ForStreamers = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
+              <CarouselPrevious className="left-2" />
+              <CarouselNext className="right-2" />
             </Carousel>
           </motion.div>
         </div>

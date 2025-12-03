@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Mail, MessageCircle, Send } from "lucide-react";
+import { Mail, MessageCircle, Send, Loader2 } from "lucide-react";
+import { useContactForm } from "@/hooks/useContactForm";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -23,7 +24,9 @@ const Contact = () => {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { submitForm, isSubmitting } = useContactForm();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.userType || !formData.message) {
@@ -31,9 +34,20 @@ const Contact = () => {
       return;
     }
 
-    // Simulate form submission
-    toast.success("Mensagem enviada com sucesso! Entraremos em contato em breve.");
-    setFormData({ name: "", email: "", userType: "", message: "" });
+    const result = await submitForm({
+      name: formData.name,
+      email: formData.email,
+      userType: formData.userType,
+      message: formData.message,
+      source: "contact",
+    });
+
+    if (result.success) {
+      toast.success("Mensagem enviada com sucesso! Você receberá uma confirmação por e-mail.");
+      setFormData({ name: "", email: "", userType: "", message: "" });
+    } else {
+      toast.error(result.message);
+    }
   };
 
   return (
@@ -74,6 +88,7 @@ const Contact = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
                       }
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -87,6 +102,7 @@ const Contact = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, email: e.target.value })
                       }
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -97,6 +113,7 @@ const Contact = () => {
                       onValueChange={(value) =>
                         setFormData({ ...formData, userType: value })
                       }
+                      disabled={isSubmitting}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma opção" />
@@ -119,12 +136,28 @@ const Contact = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, message: e.target.value })
                       }
+                      disabled={isSubmitting}
                     />
                   </div>
 
-                  <Button type="submit" variant="hero" size="lg" className="w-full">
-                    <Send size={16} />
-                    Enviar Mensagem
+                  <Button 
+                    type="submit" 
+                    variant="hero" 
+                    size="lg" 
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Enviar Mensagem
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>

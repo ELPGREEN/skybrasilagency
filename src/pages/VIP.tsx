@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Sparkles, CheckCircle } from "lucide-react";
+import { Sparkles, CheckCircle, Loader2 } from "lucide-react";
+import { useContactForm } from "@/hooks/useContactForm";
 
 const VIP = () => {
   const [formData, setFormData] = useState({
@@ -20,7 +21,9 @@ const VIP = () => {
     acceptTerms: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { submitForm, isSubmitting } = useContactForm();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.acceptTerms) {
@@ -38,19 +41,30 @@ const VIP = () => {
       return;
     }
 
-    // Simulate form submission
-    toast.success(
-      "Inscrição enviada com sucesso! Entraremos em contato em breve."
-    );
-    setFormData({
-      name: "",
-      email: "",
-      channel: "",
-      platform: "",
-      followers: "",
-      description: "",
-      acceptTerms: false,
+    const result = await submitForm({
+      name: formData.name,
+      email: formData.email,
+      message: formData.description || "Inscrição VIP sem descrição adicional",
+      source: "vip",
+      channel: formData.channel,
+      platform: formData.platform,
+      followers: formData.followers,
     });
+
+    if (result.success) {
+      toast.success("Inscrição enviada com sucesso! Você receberá uma confirmação por e-mail.");
+      setFormData({
+        name: "",
+        email: "",
+        channel: "",
+        platform: "",
+        followers: "",
+        description: "",
+        acceptTerms: false,
+      });
+    } else {
+      toast.error(result.message);
+    }
   };
 
   const benefits = [
@@ -111,6 +125,7 @@ const VIP = () => {
                         setFormData({ ...formData, name: e.target.value })
                       }
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -127,6 +142,7 @@ const VIP = () => {
                         setFormData({ ...formData, email: e.target.value })
                       }
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -142,6 +158,7 @@ const VIP = () => {
                         setFormData({ ...formData, channel: e.target.value })
                       }
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -157,6 +174,7 @@ const VIP = () => {
                         setFormData({ ...formData, platform: e.target.value })
                       }
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -169,6 +187,7 @@ const VIP = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, followers: e.target.value })
                       }
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -184,6 +203,7 @@ const VIP = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, description: e.target.value })
                       }
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -197,6 +217,7 @@ const VIP = () => {
                           acceptTerms: checked as boolean,
                         })
                       }
+                      disabled={isSubmitting}
                     />
                     <Label htmlFor="terms" className="text-sm leading-relaxed">
                       Aceito os termos e condições e autorizo o contato da SKY
@@ -204,9 +225,24 @@ const VIP = () => {
                     </Label>
                   </div>
 
-                  <Button type="submit" variant="hero" size="lg" className="w-full">
-                    <Sparkles size={16} />
-                    Enviar Inscrição VIP
+                  <Button 
+                    type="submit" 
+                    variant="hero" 
+                    size="lg" 
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Enviar Inscrição VIP
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const adminEmail = Deno.env.get("ADMIN_EMAIL") || "admin@skybrasil.com.br";
@@ -11,17 +12,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface ContactRequest {
-  name: string;
-  email: string;
-  userType?: string;
-  message: string;
-  source: "contact" | "vip";
-  // VIP specific fields
-  channel?: string;
-  platform?: string;
-  followers?: string;
+// Sanitização de texto para prevenir XSS/injection
+function sanitizeText(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .trim();
 }
+
+// Regex para email RFC 5322 simplificado
+const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+// Schema de validação com Zod
+const contactRequestSchema = z.object({
+  name: z.string()
+    .min(2, 'Nome deve ter pelo menos 2 caracteres')
+    .max(100, 'Nome deve ter no máximo 100 caracteres')
+    .transform(sanitizeText),
+  email: z.string()
+    .email('Email inválido')
+    .max(255, 'Email deve ter no máximo 255 caracteres')
+    .regex(emailRegex, 'Formato de email inválido'),
+  userType: z.string()
+    .max(50, 'Tipo deve ter no máximo 50 caracteres')
+    .optional()
+    .transform(val => val ? sanitizeText(val) : val),
+  message: z.string()
+    .min(1, 'Mensagem obrigatória')
+    .max(2000, 'Mensagem deve ter no máximo 2000 caracteres')
+    .transform(sanitizeText),
+  source: z.enum(['contact', 'vip']),
+  channel: z.string()
+    .max(100, 'Canal deve ter no máximo 100 caracteres')
+    .optional()
+    .transform(val => val ? sanitizeText(val) : val),
+  platform: z.string()
+    .max(50, 'Plataforma deve ter no máximo 50 caracteres')
+    .optional()
+    .transform(val => val ? sanitizeText(val) : val),
+  followers: z.string()
+    .max(20, 'Seguidores deve ter no máximo 20 caracteres')
+    .optional()
+    .transform(val => val ? sanitizeText(val) : val),
+});
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -30,18 +69,20 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const body: ContactRequest = await req.json();
-    console.log("Received contact submission:", { ...body, email: "***" });
-
-    const { name, email, userType, message, source, channel, platform, followers } = body;
-
-    // Validação básica
-    if (!name || !email || !message) {
+    const rawBody = await req.json();
+    
+    // Validação com Zod
+    const validationResult = contactRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => e.message).join(', ');
       return new Response(
-        JSON.stringify({ error: "Nome, email e mensagem são obrigatórios" }),
+        JSON.stringify({ error: `Dados inválidos: ${errors}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const { name, email, userType, message, source, channel, platform, followers } = validationResult.data;
 
     // Criar cliente Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -52,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
     const submissionData = {
       name,
       email,
-      user_type: userType || channel ? `${platform} - ${followers || 'N/A'} seguidores` : null,
+      user_type: userType || (channel ? `${platform} - ${followers || 'N/A'} seguidores` : null),
       message: source === "vip" 
         ? `Canal: ${channel}\nPlataforma: ${platform}\nSeguidores: ${followers || 'N/A'}\n\n${message}`
         : message,
@@ -66,81 +107,91 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (dbError) {
-      console.error("Database error:", dbError);
       return new Response(
         JSON.stringify({ error: "Erro ao salvar mensagem" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Submission saved to database:", submission.id);
-
-    // Enviar email de confirmação para o usuário
-    const userEmailSubject = source === "vip" 
-      ? "SKY BRASIL - Recebemos sua inscrição VIP!" 
-      : "SKY BRASIL - Recebemos sua mensagem!";
-
-    const userEmailContent = source === "vip" 
-      ? `
-        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%); border-radius: 12px; overflow: hidden;">
-          <div style="background: linear-gradient(90deg, #ff0080, #7928ca); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">🌟 Lista VIP SKY BRASIL</h1>
-          </div>
-          <div style="padding: 40px; color: #e0e0e0;">
-            <h2 style="color: #ff0080; margin-top: 0;">Olá, ${name}!</h2>
-            <p style="font-size: 16px; line-height: 1.8;">
-              Recebemos sua inscrição para a <strong style="color: #7928ca;">Lista VIP</strong>! 
-              Nossa equipe irá analisar seu perfil e entraremos em contato em até <strong>7 dias úteis</strong>.
-            </p>
-            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #ff0080;">
-              <p style="margin: 0; color: #a0a0a0;"><strong>Canal:</strong> ${channel}</p>
-              <p style="margin: 8px 0; color: #a0a0a0;"><strong>Plataforma:</strong> ${platform}</p>
-              ${followers ? `<p style="margin: 0; color: #a0a0a0;"><strong>Seguidores:</strong> ${followers}</p>` : ''}
+    // Templates de email aprovados pelo cliente
+    const getEmailContent = () => {
+      if (source === "vip") {
+        // c) Confirmação de Inscrição VIP
+        return {
+          subject: "Inscrição confirmada!",
+          html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0;">
+              <div style="background: linear-gradient(90deg, #ff0080, #7928ca); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">SKY BRASIL</h1>
+              </div>
+              <div style="padding: 40px; color: #333333;">
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Olá ${name},
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Sua inscrição foi realizada com sucesso! Você já está na nossa lista exclusiva.
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Fique de olho no seu e-mail para receber conteúdos e convites especiais.
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-top: 30px;">
+                  Abraços,<br>
+                  <strong>Equipe SKY BRASIL</strong>
+                </p>
+              </div>
+              <div style="background: #f5f5f5; padding: 20px; text-align: center; color: #666; font-size: 12px;">
+                <p style="margin: 0;">© ${new Date().getFullYear()} SKY BRASIL. Todos os direitos reservados.</p>
+              </div>
             </div>
-            <p style="font-size: 14px; color: #888;">
-              Enquanto isso, siga nossas redes sociais para ficar por dentro das novidades!
-            </p>
-          </div>
-          <div style="background: rgba(0,0,0,0.3); padding: 20px; text-align: center; color: #666; font-size: 12px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} SKY BRASIL. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      `
-      : `
-        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%); border-radius: 12px; overflow: hidden;">
-          <div style="background: linear-gradient(90deg, #00d4ff, #7928ca); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">✉️ SKY BRASIL</h1>
-          </div>
-          <div style="padding: 40px; color: #e0e0e0;">
-            <h2 style="color: #00d4ff; margin-top: 0;">Olá, ${name}!</h2>
-            <p style="font-size: 16px; line-height: 1.8;">
-              Recebemos sua mensagem e nossa equipe irá analisá-la. 
-              Responderemos em até <strong>24 horas úteis</strong>.
-            </p>
-            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #00d4ff;">
-              <p style="margin: 0; color: #a0a0a0; font-style: italic;">"${message.substring(0, 200)}${message.length > 200 ? '...' : ''}"</p>
+          `
+        };
+      } else {
+        // a) Formulário de Contato / Orçamento / Fale Conosco
+        return {
+          subject: "Recebemos sua mensagem!",
+          html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0;">
+              <div style="background: linear-gradient(90deg, #00d4ff, #7928ca); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">SKY BRASIL</h1>
+              </div>
+              <div style="padding: 40px; color: #333333;">
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Olá ${name},
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Obrigado pelo contato!
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Recebemos sua solicitação e entraremos em contato em até 7 dias úteis.
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
+                  Caso precise de atendimento imediato, responda este e-mail ou ligue para nosso time.
+                </p>
+                <p style="font-size: 16px; line-height: 1.8; margin-top: 30px;">
+                  Atenciosamente,<br>
+                  <strong>Equipe SKY BRASIL</strong>
+                </p>
+              </div>
+              <div style="background: #f5f5f5; padding: 20px; text-align: center; color: #666; font-size: 12px;">
+                <p style="margin: 0;">© ${new Date().getFullYear()} SKY BRASIL. Todos os direitos reservados.</p>
+              </div>
             </div>
-            <p style="font-size: 14px; color: #888;">
-              Se precisar de ajuda urgente, entre em contato pelo email: contato@skybrasil.com.br
-            </p>
-          </div>
-          <div style="background: rgba(0,0,0,0.3); padding: 20px; text-align: center; color: #666; font-size: 12px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} SKY BRASIL. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      `;
+          `
+        };
+      }
+    };
+
+    const emailContent = getEmailContent();
 
     // Email para o usuário
     try {
-      const userEmailResponse = await resend.emails.send({
+      await resend.emails.send({
         from: "SKY BRASIL <onboarding@resend.dev>",
         to: [email],
-        subject: userEmailSubject,
-        html: userEmailContent,
+        subject: emailContent.subject,
+        html: emailContent.html,
       });
-      console.log("User confirmation email sent:", userEmailResponse);
     } catch (emailError) {
-      console.error("Error sending user email:", emailError);
       // Não falha o request se o email não for enviado
     }
 
@@ -171,15 +222,14 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
       `;
 
-      const adminEmailResponse = await resend.emails.send({
+      await resend.emails.send({
         from: "SKY BRASIL Forms <onboarding@resend.dev>",
         to: [adminEmail],
         subject: `[SKY BRASIL] Nova ${source === 'vip' ? 'Inscrição VIP' : 'Mensagem'}: ${name}`,
         html: adminEmailContent,
       });
-      console.log("Admin notification email sent:", adminEmailResponse);
     } catch (emailError) {
-      console.error("Error sending admin email:", emailError);
+      // Log silencioso
     }
 
     return new Response(
@@ -194,7 +244,6 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in submit-contact function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -42,6 +42,19 @@ export interface PaymentResult {
   error?: string;
 }
 
+// Helper para logs condicionais (apenas em desenvolvimento)
+const devLog = (...args: any[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
+const devError = (...args: any[]) => {
+  if (import.meta.env.DEV) {
+    console.error(...args);
+  }
+};
+
 export const useEfiPayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +70,7 @@ export const useEfiPayment = () => {
       }
 
       // 1. Obter token do cartão
-      console.log('Gerando token do cartão...');
+      devLog('Gerando token do cartão...');
       
       const cardData = {
         brand: detectCardBrand(paymentData.cardNumber),
@@ -78,7 +91,7 @@ export const useEfiPayment = () => {
             .setExpirationYear(cardData.expirationYear)
             .getPaymentToken((error: any, token: string) => {
               if (error) {
-                reject(new Error('Erro ao tokenizar cartão: ' + error));
+                reject(new Error('Erro ao tokenizar cartão'));
               } else {
                 resolve(token);
               }
@@ -88,7 +101,7 @@ export const useEfiPayment = () => {
         throw new Error('Falha ao processar dados do cartão. Verifique as informações.');
       }
 
-      console.log('Token gerado com sucesso');
+      devLog('Token gerado com sucesso');
 
       // 2. Enviar para edge function processar pagamento
       const { data, error: functionError } = await supabase.functions.invoke('process-payment', {
@@ -130,7 +143,7 @@ export const useEfiPayment = () => {
     } catch (err: any) {
       const errorMessage = err.message || 'Erro desconhecido ao processar pagamento';
       setError(errorMessage);
-      console.error('Erro no pagamento:', err);
+      devError('Erro no pagamento:', err.message);
       return {
         success: false,
         error: errorMessage,

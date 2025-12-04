@@ -10,11 +10,14 @@ import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useEfiPayment } from "@/hooks/useEfiPayment";
 import { initEfiPay } from "@/lib/efiConfig";
+import { checkoutSchema } from "@/lib/validation";
+import { supabase } from "@/integrations/supabase/client";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
   const { processPayment, isProcessing } = useEfiPayment();
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
   // Form state
   const [formData, setFormData] = useState({
@@ -36,12 +39,10 @@ const Checkout = () => {
 
   // Inicializar EfíPay SDK ao montar o componente
   useEffect(() => {
-    // IMPORTANTE: Substitua 'SEU_PAYEE_CODE' pelo seu payee_code da EfíPay
     const PAYEE_CODE = 'SEU_PAYEE_CODE_AQUI';
-    const ENVIRONMENT = 'sandbox'; // ou 'production'
+    const ENVIRONMENT = 'sandbox';
     
-    initEfiPay(PAYEE_CODE, ENVIRONMENT as 'sandbox' | 'production').catch((error) => {
-      console.error('Erro ao inicializar EfíPay:', error);
+    initEfiPay(PAYEE_CODE, ENVIRONMENT as 'sandbox' | 'production').catch(() => {
       toast({
         title: "Erro de inicialização",
         description: "Não foi possível carregar o sistema de pagamento. Recarregue a página.",
@@ -53,27 +54,66 @@ const Checkout = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
+    // Limpar erro do campo ao digitar
+    if (validationErrors[id]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[id];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const result = checkoutSchema.safeParse(formData);
+    
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.errors.forEach(err => {
+        const field = err.path[0] as string;
+        errors[field] = err.message;
+      });
+      setValidationErrors(errors);
+      
+      // Mostrar primeiro erro como toast
+      const firstError = result.error.errors[0];
+      toast({
+        title: "Erro de validação",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    setValidationErrors({});
+    return true;
+  };
+
+  const sendOrderConfirmation = async (orderId: string) => {
+    try {
+      await supabase.functions.invoke('send-order-confirmation', {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          orderId: orderId,
+          total: total,
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+      });
+    } catch {
+      // Silencioso - não falha a compra se email não for enviado
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validações básicas
-    if (!formData.name || !formData.email || !formData.cpf || !formData.phone) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.cardNumber || !formData.cvv || !formData.expiry) {
-      toast({
-        title: "Dados do cartão incompletos",
-        description: "Preencha todos os dados do cartão.",
-        variant: "destructive",
-      });
+    // Validação client-side
+    if (!validateForm()) {
       return;
     }
 
@@ -97,7 +137,7 @@ const Checkout = () => {
         street: formData.street,
         number: formData.number,
         neighborhood: formData.neighborhood,
-        zipcode: formData.cep,
+        zipcode: formData.cep.replace(/\D/g, ''),
         city: formData.city,
         complement: formData.complement,
       },
@@ -112,9 +152,12 @@ const Checkout = () => {
     const result = await processPayment(paymentData);
 
     if (result.success) {
+      // Enviar email de confirmação
+      await sendOrderConfirmation(result.charge_id || `${Date.now()}`);
+      
       toast({
         title: "Pagamento confirmado!",
-        description: `Seu pedido foi processado com sucesso. ID: ${result.charge_id}`,
+        description: "Você receberá um email com os detalhes do pedido.",
         duration: 5000,
       });
       clearCart();
@@ -146,6 +189,8 @@ const Checkout = () => {
       </div>
     );
   }
+
+  const getFieldError = (field: string) => validationErrors[field];
 
   return (
     <div className="min-h-screen bg-gradient-tech py-12 px-4">
@@ -183,8 +228,10 @@ const Checkout = () => {
                         placeholder="Seu nome" 
                         value={formData.name}
                         onChange={handleInputChange}
+                        className={getFieldError('name') ? 'border-destructive' : ''}
                         required 
                       />
+                      {getFieldError('name') && <p className="text-xs text-destructive mt-1">{getFieldError('name')}</p>}
                     </div>
                     <div>
                       <Label htmlFor="email">E-mail</Label>
@@ -194,8 +241,10 @@ const Checkout = () => {
                         placeholder="seu@email.com"
                         value={formData.email}
                         onChange={handleInputChange}
+                        className={getFieldError('email') ? 'border-destructive' : ''}
                         required 
                       />
+                      {getFieldError('email') && <p className="text-xs text-destructive mt-1">{getFieldError('email')}</p>}
                     </div>
                     <div>
                       <Label htmlFor="phone">Telefone</Label>
@@ -205,8 +254,10 @@ const Checkout = () => {
                         placeholder="(00) 00000-0000"
                         value={formData.phone}
                         onChange={handleInputChange}
+                        className={getFieldError('phone') ? 'border-destructive' : ''}
                         required 
                       />
+                      {getFieldError('phone') && <p className="text-xs text-destructive mt-1">{getFieldError('phone')}</p>}
                     </div>
                     <div>
                       <Label htmlFor="cpf">CPF</Label>
@@ -215,8 +266,10 @@ const Checkout = () => {
                         placeholder="000.000.000-00"
                         value={formData.cpf}
                         onChange={handleInputChange}
+                        className={getFieldError('cpf') ? 'border-destructive' : ''}
                         required 
                       />
+                      {getFieldError('cpf') && <p className="text-xs text-destructive mt-1">{getFieldError('cpf')}</p>}
                     </div>
                   </div>
                 </form>
@@ -239,8 +292,10 @@ const Checkout = () => {
                       placeholder="00000-000"
                       value={formData.cep}
                       onChange={handleInputChange}
+                      className={getFieldError('cep') ? 'border-destructive' : ''}
                       required 
                     />
+                    {getFieldError('cep') && <p className="text-xs text-destructive mt-1">{getFieldError('cep')}</p>}
                   </div>
                 </div>
                 <div>
@@ -250,8 +305,10 @@ const Checkout = () => {
                     placeholder="Nome da rua"
                     value={formData.street}
                     onChange={handleInputChange}
+                    className={getFieldError('street') ? 'border-destructive' : ''}
                     required 
                   />
+                  {getFieldError('street') && <p className="text-xs text-destructive mt-1">{getFieldError('street')}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -261,8 +318,10 @@ const Checkout = () => {
                       placeholder="123"
                       value={formData.number}
                       onChange={handleInputChange}
+                      className={getFieldError('number') ? 'border-destructive' : ''}
                       required 
                     />
+                    {getFieldError('number') && <p className="text-xs text-destructive mt-1">{getFieldError('number')}</p>}
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="complement">Complemento</Label>
@@ -282,8 +341,10 @@ const Checkout = () => {
                       placeholder="Bairro"
                       value={formData.neighborhood}
                       onChange={handleInputChange}
+                      className={getFieldError('neighborhood') ? 'border-destructive' : ''}
                       required 
                     />
+                    {getFieldError('neighborhood') && <p className="text-xs text-destructive mt-1">{getFieldError('neighborhood')}</p>}
                   </div>
                   <div>
                     <Label htmlFor="city">Cidade</Label>
@@ -292,8 +353,10 @@ const Checkout = () => {
                       placeholder="Cidade"
                       value={formData.city}
                       onChange={handleInputChange}
+                      className={getFieldError('city') ? 'border-destructive' : ''}
                       required 
                     />
+                    {getFieldError('city') && <p className="text-xs text-destructive mt-1">{getFieldError('city')}</p>}
                   </div>
                 </div>
               </CardContent>
@@ -314,9 +377,11 @@ const Checkout = () => {
                     placeholder="0000 0000 0000 0000"
                     value={formData.cardNumber}
                     onChange={handleInputChange}
+                    className={getFieldError('cardNumber') ? 'border-destructive' : ''}
                     maxLength={19}
                     required 
                   />
+                  {getFieldError('cardNumber') && <p className="text-xs text-destructive mt-1">{getFieldError('cardNumber')}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -326,9 +391,11 @@ const Checkout = () => {
                       placeholder="MM/AA"
                       value={formData.expiry}
                       onChange={handleInputChange}
+                      className={getFieldError('expiry') ? 'border-destructive' : ''}
                       maxLength={5}
                       required 
                     />
+                    {getFieldError('expiry') && <p className="text-xs text-destructive mt-1">{getFieldError('expiry')}</p>}
                   </div>
                   <div>
                     <Label htmlFor="cvv">CVV</Label>
@@ -337,9 +404,11 @@ const Checkout = () => {
                       placeholder="123"
                       value={formData.cvv}
                       onChange={handleInputChange}
+                      className={getFieldError('cvv') ? 'border-destructive' : ''}
                       maxLength={4}
                       required 
                     />
+                    {getFieldError('cvv') && <p className="text-xs text-destructive mt-1">{getFieldError('cvv')}</p>}
                   </div>
                 </div>
                 <div>
@@ -349,8 +418,10 @@ const Checkout = () => {
                     placeholder="Nome impresso no cartão"
                     value={formData.cardName}
                     onChange={handleInputChange}
+                    className={getFieldError('cardName') ? 'border-destructive' : ''}
                     required 
                   />
+                  {getFieldError('cardName') && <p className="text-xs text-destructive mt-1">{getFieldError('cardName')}</p>}
                 </div>
               </CardContent>
             </Card>
